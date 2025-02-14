@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const connectDB = require("./config/db");
 const Catway = require("./models/Catway");
 const Reservation = require("./models/Reservation");
+const User = require("./models/User");
 
 connectDB()
   .then(async () => {
@@ -10,6 +11,8 @@ connectDB()
       await Catway.insertMany(require("./data/catways.json"));
 
       await Reservation.insertMany(require("./data/reservations.json"));
+
+      await User.insertMany(require("./data/users.json"));
 
       console.log("Données importées avec succès");
       process.exit();
