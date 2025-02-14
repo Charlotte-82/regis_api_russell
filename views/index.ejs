@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Port de plaisance Russell</title>
+    <link rel="stylesheet" href="./css/index.css" />
+  </head>
+  <body>
+    <div class="logoBox">
+      <img class="logo" src="/images/ancre.png" alt="icône d'ancre de bateau" />
+    </div>
+    <h1>Port de Plaisance Russell</h1>
+    <h2>Portail de gestion</h2>
+    <h3>Connexion</h3>
+    <div class="loginForm">
+      <form action="api/auth/login" method="post">
+        <fieldset>
+          <legend>Veuillez renseigner les informations suivantes:</legend>
+          <label for="email">Adresse email</label>
+          <input
+            type="email"
+            id="email"
+            name="user_email"
+            placeholder="Votre adresse email"
+            required
+          /><br />
+          <label for="password">Mot de passe</label>
+          <input
+            type="password"
+            id="password"
+            name="user_password"
+            placeholder="Votre mot de passe"
+            required
+          /><br />
+          <div class="buttonForm">
+            <button type="submit">Accéder au tableau de bord</button>
+          </div>
+          <div id="error-message"></div>
+        </fieldset>
+      </form>
+    </div>
+    <script>
+      const form = document.querySelector("form");
+      const errorMessage = document.getElementById("error-message");
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+
+        fetch("/api/auth/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email, password }),
+        })
+          .then((response) => {
+            if (!response.ok) {
+              return response.json().then((err) => {
+                throw new Error(err.message);
+              });
+            }
+            return response.json();
+          })
+          .then((data) => {
+            localStorage.setItem("token", data.token);
+
+            const expiryDate = new Date();
+            expiryDate.setHours(expiryDate.getHours() + 1);
+            localStorage.setItem("tokenExpiry", expiryDate.toISOString());
+
+            window.location.href = "/dashboard";
+          })
+          .catch((error) => {
+            errorMessage.textContent = error.message;
+          });
+      });
+    </script>
+    <p>Documentation</p>
+  </body>
+</html>
