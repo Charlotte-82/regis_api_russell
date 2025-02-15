@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Port de plaisance Russell</title>
+    <link rel="stylesheet" href="css/dashboard.css" />
+  </head>
+  <body>
+    <%- include('composants/backButton') %>
+    <h1>Gestion des catways</h1>
+
+    <h2>Ajouter un catway</h2>
+    <form id="form-ajout">
+      <input
+        type="text"
+        id="newCatwayNumber"
+        placeholder="Numéro du catway"
+        required
+      />
+      <input
+        type="text"
+        id="newCatwayType"
+        placeholder="short ou long"
+        required
+      />
+      <input
+        type="text"
+        id="newCatwayState"
+        placeholder="état du catway"
+        required
+      />
+      <button type="submit">Ajouter</button>
+    </form>
+
+    <h2>Liste des catways</h2>
+    <div class="tableau">
+      <table>
+        <thead>
+          <tr>
+            <th>Numéro du catway</th>
+            <th>Type de catway</th>
+            <th>État du catway</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div id="modal-modification" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <h2>Modifier l'état du catway</h2>
+        <form id="form-modification">
+          <input type="hidden" id="catway-id" />
+          <input
+            type="text"
+            id="catwayState"
+            placeholder="État du catway"
+            required
+          />
+          <button type="submit">Enregistrer</button>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      const token = localStorage.getItem("token");
+
+      function chargerCatways() {
+        fetch("/api/catways", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then((catways) => {
+            const tableBody = document.querySelector("tbody");
+            tableBody.innerHTML = "";
+
+            catways.forEach((catway) => {
+              const row = tableBody.insertRow();
+              const numberCell = row.insertCell();
+              const typeCell = row.insertCell();
+              const stateCell = row.insertCell();
+              const actionCell = row.insertCell();
+
+              numberCell.textContent = catway.catwayNumber;
+              typeCell.textContent = catway.catwayType;
+              stateCell.textContent = catway.catwayState;
+
+              actionCell.innerHTML = `
+                        <button class="btn-modifier" data-id="${catway._id}">Modifier</button>
+                        <button onclick="supprimerCatway('${catway._id}', this)">Supprimer</button>
+                    `;
+            });
+
+            document.querySelectorAll(".btn-modifier").forEach((button) => {
+              button.addEventListener("click", function () {
+                openModal(this.dataset.id);
+              });
+            });
+          })
+          .catch((error) =>
+            console.error("Erreur chargement catways :", error)
+          );
+      }
+
+      function openModal(id) {
+        const modal = document.getElementById("modal-modification");
+        modal.style.display = "block";
+
+        fetch(`/api/catways/${id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then((catway) => {
+            document.getElementById("catway-id").value = catway._id;
+            document.getElementById("catwayState").value = catway.catwayState;
+          })
+          .catch((error) =>
+            console.error("Erreur récupération catway :", error)
+          );
+      }
+
+      function closeModal() {
+        document.getElementById("modal-modification").style.display = "none";
+      }
+
+      function supprimerCatway(id, button) {
+        fetch(`/api/catways/${id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            console.log("Catway supprimé");
+            button.closest("tr").remove();
+          })
+          .catch((error) =>
+            console.error("Erreur suppression catway :", error)
+          );
+      }
+
+      document
+        .getElementById("form-modification")
+        .addEventListener("submit", (event) => {
+          event.preventDefault();
+
+          const id = document.getElementById("catway-id").value;
+          const updatedCatway = {
+            catwayState: document.getElementById("catwayState").value,
+          };
+
+          fetch(`/api/catways/${id}`, {
+            method: "PATCH",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(updatedCatway),
+          })
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+              }
+              console.log("Catway modifié");
+              closeModal();
+              chargerCatways();
+            })
+            .catch((error) =>
+              console.error("Erreur modification catway :", error)
+            );
+        });
+
+      document
+        .getElementById("form-ajout")
+        .addEventListener("submit", (event) => {
+          event.preventDefault();
+
+          const newCatway = {
+            catwayNumber: document.getElementById("newCatwayNumber").value,
+            catwayType: document.getElementById("newCatwayType").value,
+            catwayState: document.getElementById("newCatwayState").value,
+          };
+
+          fetch("/api/catways", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(newCatway),
+          })
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+              }
+              return response.json();
+            })
+            .then((data) => {
+              console.log("Catway ajouté !");
+              document.getElementById("form-ajout").reset();
+              chargerCatways();
+            })
+            .catch((error) => console.error("Erreur ajout catway :", error));
+        });
+
+      window.addEventListener("DOMContentLoaded", (event) => {
+        chargerCatways();
+      });
+    </script>
+  </body>
+</html>

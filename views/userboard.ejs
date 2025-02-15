@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Port de plaisance Russell</title>
+    <link rel="stylesheet" href="css/dashboard.css" />
+  </head>
+  <body>
+    <%- include('composants/backButton') %>
+    <h1>Gestion des utilisateurs</h1>
+
+    <h2>Ajouter un utilisateur</h2>
+    <form id="form-ajout">
+      <input
+        type="text"
+        id="newUsername"
+        placeholder="Nom ou Fonction"
+        required
+      />
+      <input type="text" id="newEmail" placeholder="Adresse email" required />
+      <input type="text" id="newPassword" placeholder="Mot de passe" required />
+      <button type="submit">Ajouter</button>
+    </form>
+
+    <h2>Liste des utilisateurs</h2>
+    <div class="tableau">
+      <table>
+        <thead>
+          <tr>
+            <th>Nom ou Fonction</th>
+            <th>Adresse email</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div id="modal-modification" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <h2>Modifier l'utilisateur</h2>
+        <form id="form-modification">
+          <input type="hidden" id="user-id" />
+          <input
+            type="text"
+            id="username"
+            placeholder="Nom ou Fonction"
+            required
+          />
+          <input type="text" id="email" placeholder="Adresse email" required />
+          <input
+            type="text"
+            id="password"
+            placeholder="Mot de passe"
+            required
+          />
+          <button type="submit">Enregistrer</button>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      const token = localStorage.getItem("token");
+
+      function chargerUsers() {
+        fetch("/api/users", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then((users) => {
+            const tableBody = document.querySelector("tbody");
+            tableBody.innerHTML = "";
+
+            users.forEach((user) => {
+              const row = tableBody.insertRow();
+              const usernameCell = row.insertCell();
+              const emailCell = row.insertCell();
+
+              usernameCell.textContent = user.username;
+              emailCell.textContent = user.email;
+
+              actionCell.innerHTML = `
+                        <button class="btn-modifier" data-id="${user._id}">Modifier</button>
+                        <button onclick="supprimerUser('${user._id}', this)">Supprimer</button>
+                    `;
+            });
+
+            document.querySelectorAll(".btn-modifier").forEach((button) => {
+              button.addEventListener("click", function () {
+                openModal(this.dataset.id);
+              });
+            });
+          })
+          .catch((error) =>
+            console.error("Erreur chargement utilisateurs :", error)
+          );
+      }
+
+      function openModal(id) {
+        const modal = document.getElementById("modal-modification");
+        modal.style.display = "block";
+
+        fetch(`/api/users/${id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then((user) => {
+            document.getElementById("user-id").value = user._id;
+            document.getElementById("username").value = user.username;
+            document.getElementById("email").value = user.email;
+            document.getElementById("password").value = user.password;
+          })
+          .catch((error) =>
+            console.error("Erreur récupération utilisateur :", error)
+          );
+      }
+
+      function closeModal() {
+        document.getElementById("modal-modification").style.display = "none";
+      }
+
+      function supprimerUser(id, button) {
+        fetch(`/api/users/${id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            console.log("Utilisateur supprimé");
+            button.closest("tr").remove();
+          })
+          .catch((error) =>
+            console.error("Erreur suppression utilisateur :", error)
+          );
+      }
+
+      document
+        .getElementById("form-modification")
+        .addEventListener("submit", (event) => {
+          event.preventDefault();
+
+          const id = document.getElementById("user-id").value;
+          const updatedUser = {
+            username: document.getElementById("username").value,
+            email: document.getElementById("email").value,
+            password: document.getElementById("password").value,
+          };
+
+          fetch(`/api/users/${id}`, {
+            method: "PATCH",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(updatedCatway),
+          })
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+              }
+              console.log("Utilisateur modifié");
+              closeModal();
+              chargerUsers();
+            })
+            .catch((error) =>
+              console.error("Erreur modification user :", error)
+            );
+        });
+
+      document
+        .getElementById("form-ajout")
+        .addEventListener("submit", (event) => {
+          event.preventDefault();
+
+          const newCatway = {
+            username: document.getElementById("newUsername").value,
+            email: document.getElementById("newEmail").value,
+            password: document.getElementById("newPassword").value,
+          };
+
+          fetch("/api/users.", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(newUser),
+          })
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+              }
+              return response.json();
+            })
+            .then((data) => {
+              console.log("Utilisateur ajouté !");
+              document.getElementById("form-ajout").reset();
+              chargerUsers();
+            })
+            .catch((error) =>
+              console.error("Erreur ajout utilisateur :", error)
+            );
+        });
+
+      window.addEventListener("DOMContentLoaded", (event) => {
+        chargerUsers();
+      });
+    </script>
+  </body>
+</html>

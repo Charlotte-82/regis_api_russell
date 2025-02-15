@@ -8,17 +8,30 @@
   </head>
   <body>
     <%- include('composants/backButton') %>
-    <h1>Gestion des utilisateurs</h1>
+    <h1>Gestion des réservations</h1>
+
     <h2>Ajouter une réservation</h2>
-    <form>
-      <select>
-        <option>Choisir un catway</option>
-        <option></option>
-      </select>
-      <input type="text" placeholder="Nom du client" required />
-      <input type="text" placeholder="Nom du bateau" required />
-      <input type="date" placeholder="date de début" required />
-      <input type="date" placeholder="date de fin" required />
+    <form id="form-ajout">
+      <input
+        type="text"
+        id="newCatwayNumber"
+        placeholder="Numéro du catway"
+        required
+      />
+      <input
+        type="text"
+        id="newClientName"
+        placeholder="Nom du client"
+        required
+      />
+      <input
+        type="text"
+        id="newBoatName"
+        placeholder="Nom du bateau"
+        required
+      />
+      <input type="date" id="newStartDate" required />
+      <input type="date" id="newEndDate" required />
       <button type="submit">Ajouter</button>
     </form>
 
@@ -38,77 +51,193 @@
         <tbody></tbody>
       </table>
     </div>
+
+    <div id="modal-modification" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <h2>Modifier la réservation</h2>
+        <form id="form-modification">
+          <input type="hidden" id="reservation-id" />
+          <input
+            type="text"
+            id="catwayNumber"
+            placeholder="Numéro du catway"
+            required
+          />
+          <input
+            type="text"
+            id="clientName"
+            placeholder="Nom du client"
+            required
+          />
+          <input
+            type="text"
+            id="boatName"
+            placeholder="Nom du bateau"
+            required
+          />
+          <input type="date" id="startDate" required />
+          <input type="date" id="endDate" required />
+          <button type="submit">Enregistrer</button>
+        </form>
+      </div>
+    </div>
+
     <script>
       const token = localStorage.getItem("token");
-      console.log("Token envoyé (reservationboard) :", token);
-      fetch("/api/reservations", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      })
-        .then((response) => {
-          if (!response.ok) {
-            console.error("Erreur d'authentification:", response.status);
-            return Promise.reject(new Error("Erreur d'authentification"));
-          }
-          return response.json();
+
+      function chargerReservations() {
+        fetch("/api/reservations", {
+          headers: { Authorization: `Bearer ${token}` },
         })
-        .then((reservations) => {
-          if (Array.isArray(reservations)) {
+          .then((response) => response.json())
+          .then((reservations) => {
             const tableBody = document.querySelector("tbody");
+            tableBody.innerHTML = "";
+
             reservations.forEach((reservation) => {
               const row = tableBody.insertRow();
-              const catwayCell = row.insertCell();
-              const clientCell = row.insertCell();
-              const boatCell = row.insertCell();
-              const startCell = row.insertCell();
-              const endCell = row.insertCell();
-              const actionCell = row.insertCell();
-
-              catwayCell.textContent = reservation.catwayNumber;
-              clientCell.textContent = reservation.clientName;
-              boatCell.textContent = reservation.boatName;
-              const startDate = new Date(reservation.startDate);
-              const formattedStartDate = `${startDate
-                .getDate()
-                .toString()
-                .padStart(2, "0")}/${(startDate.getMonth() + 1)
-                .toString()
-                .padStart(2, "0")}/${startDate.getFullYear()}`;
-              startCell.textContent = formattedStartDate;
-
-              const endDate = new Date(reservation.endDate);
-              const formattedEndDate = `${endDate
-                .getDate()
-                .toString()
-                .padStart(2, "0")}/${(endDate.getMonth() + 1)
-                .toString()
-                .padStart(2, "0")}/${endDate.getFullYear()}`;
-              endCell.textContent = formattedEndDate;
-              actionCell.innerHTML = `
-                <button class="modifier-btn" data-id="${reservation._id}">Modifier</button>
-                <br>
-                <button class="supprimer-btn" data-id="${reservation._id}">Supprimer</button>
-            `;
+              row.innerHTML = `
+                <td>${reservation.catwayNumber}</td>
+                <td>${reservation.clientName}</td>
+                <td>${reservation.boatName}</td>
+                <td>${reservation.startDate.slice(0, 10)}</td>
+                <td>${reservation.endDate.slice(0, 10)}</td>
+                <td>
+                  <button class="btn-modifier" data-id="${
+                    reservation._id
+                  }">Modifier</button>
+                  <button onclick="supprimerReservation('${
+                    reservation._id
+                  }', this)">Supprimer</button>
+                </td>
+              `;
             });
-            tableBody.addEventListener("click", (event) => {
-              if (event.target.classList.contains("modifier-btn")) {
-                const reservationId = event.target.dataset.id;
-                // TODO: Implémenter la logique de modification pour la réservation avec l'ID reservationId
-                console.log("Modifier réservation avec ID :", reservationId);
-              } else if (event.target.classList.contains("supprimer-btn")) {
-                const reservationId = event.target.dataset.id;
-                // TODO: Implémenter la logique de suppression pour la réservation avec l'ID reservationId
-                console.log("Supprimer réservation avec ID :", reservationId);
-              }
+
+            document.querySelectorAll(".btn-modifier").forEach((button) => {
+              button.addEventListener("click", function () {
+                openModal(this.getAttribute("data-id"));
+              });
             });
-          } else {
-            console.error(
-              "Les données renvoyées par l'API ne sont pas un tableau:",
-              reservations
+          })
+          .catch((error) =>
+            console.error("Erreur chargement réservations :", error)
+          );
+      }
+
+      function openModal(id) {
+        const modal = document.getElementById("modal-modification");
+        modal.style.display = "block";
+
+        fetch(`/api/reservations/${id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then((response) => response.json())
+          .then((reservation) => {
+            document.getElementById("reservation-id").value = reservation._id;
+            document.getElementById("catwayNumber").value =
+              reservation.catwayNumber;
+            document.getElementById("clientName").value =
+              reservation.clientName;
+            document.getElementById("boatName").value = reservation.boatName;
+            document.getElementById("startDate").value =
+              reservation.startDate.slice(0, 10);
+            document.getElementById("endDate").value =
+              reservation.endDate.slice(0, 10);
+          })
+          .catch((error) =>
+            console.error("Erreur récupération réservation :", error)
+          );
+      }
+
+      function closeModal() {
+        document.getElementById("modal-modification").style.display = "none";
+      }
+
+      document
+        .getElementById("form-modification")
+        .addEventListener("submit", (event) => {
+          event.preventDefault();
+
+          const id = document.getElementById("reservation-id").value;
+          const updatedReservation = {
+            catwayNumber: document.getElementById("catwayNumber").value,
+            clientName: document.getElementById("clientName").value,
+            boatName: document.getElementById("boatName").value,
+            startDate: document.getElementById("startDate").value,
+            endDate: document.getElementById("endDate").value,
+          };
+
+          fetch(`/api/reservations/${id}`, {
+            method: "PATCH",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(updatedReservation),
+          })
+            .then(() => {
+              console.log("Réservation modifiée");
+              closeModal();
+
+              setTimeout(chargerReservations, 500);
+            })
+            .catch((error) =>
+              console.error("Erreur modification réservation :", error)
             );
-          }
         });
+
+      function supprimerReservation(id, button) {
+        fetch(`/api/reservations/${id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then(() => {
+            console.log("Réservation supprimée");
+            button.closest("tr").remove();
+          })
+          .catch((error) =>
+            console.error("Erreur suppression réservation :", error)
+          );
+      }
+
+      document
+        .getElementById("form-ajout")
+        .addEventListener("submit", (event) => {
+          event.preventDefault();
+
+          const newReservation = {
+            catwayNumber: document.getElementById("newCatwayNumber").value,
+            clientName: document.getElementById("newClientName").value,
+            boatName: document.getElementById("newBoatName").value,
+            startDate: document.getElementById("newStartDate").value,
+            endDate: document.getElementById("newEndDate").value,
+          };
+
+          fetch("/api/reservations", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(newReservation),
+          })
+            .then((response) => response.json())
+            .then(() => {
+              console.log("Réservation ajoutée !");
+              document.getElementById("form-ajout").reset();
+              setTimeout(chargerReservations, 500);
+            })
+            .catch((error) =>
+              console.error("Erreur ajout réservation :", error)
+            );
+        });
+
+      window.onload = () => {
+        document.getElementById("modal-modification").style.display = "none";
+      };
+
+      chargerReservations();
     </script>
   </body>
 </html>
