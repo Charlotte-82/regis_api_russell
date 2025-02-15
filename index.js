@@ -25,6 +25,18 @@ app.get("/dashboard", (req, res) => {
   res.render("dashboard");
 });
 
+app.get("/userboard", (req, res) => {
+  res.render("userboard");
+});
+
+app.get("/catwayboard", (req, res) => {
+  res.render("catwayboard");
+});
+
+app.get("/reservationboard", (req, res) => {
+  res.render("reservationboard");
+});
+
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
 });

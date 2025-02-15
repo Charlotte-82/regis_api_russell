@@ -4,26 +4,38 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Port de plaisance Russell</title>
-    <link rel="stylesheet" src="assets/css/dashboard.css" />
+    <link rel="stylesheet" href="./css/dashboard.css" />
   </head>
   <body>
+    <%- include('composants/backButton') %>
     <h1>Tableau de bord</h1>
     <div class="dashboard">
       <div class="user">
         <h2>Gestion des utilisateurs</h2>
-        <img src="./assets/images/user.png" alt="icône d'utilisateurs" />
-        <button><a href="./userboard.ejs">UTILISATEURS</a></button>
+        <img src="./images/user.png" alt="icône d'utilisateurs" /><br />
+        <button onclick="window.location.href='/userboard'">
+          UTILISATEURS
+        </button>
       </div>
       <div class="catway">
         <h2>Gestion des catways</h2>
-        <img src="./assets/images/catway.png" alt="icône de bateau" />
-        <button><a href="./catwayboard.ejs">CATWAYS</a></button>
+        <img src="./images/catway.png" alt="icône de bateau" /><br />
+        <button onclick="window.location.href='/catwayboard'">CATWAYS</button>
       </div>
       <div class="reservation">
         <h2>Gestion des réservations</h2>
-        <img src="./assets/images/reservation.png" alt="icône de calendrier" />
-        <button><a href="./reservationboard.ejs">RÉSERVATIONS</a></button>
+        <img src="./images/reservation.png" alt="icône de calendrier" /><br />
+        <button onclick="window.location.href='/reservationboard'">
+          RÉSERVATIONS
+        </button>
       </div>
     </div>
+    <button id="logoutButton">Déconnexion</button>
+    <script>
+      document.getElementById("logoutButton").addEventListener("click", () => {
+        localStorage.removeItem("token");
+        window.location.href = "/index";
+      });
+    </script>
   </body>
 </html>

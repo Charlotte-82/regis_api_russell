@@ -4,9 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Port de plaisance Russell</title>
-    <link rel="stylesheet" src="assets/css/dashboard.css" />
+    <link rel="stylesheet" href="css/dashboard.css" />
   </head>
   <body>
+    <%- include('composants/backButton') %>
     <h1>Gestion des utilisateurs</h1>
     <h2>Ajouter une réservation</h2>
     <form>
@@ -20,268 +21,94 @@
       <input type="date" placeholder="date de fin" required />
       <button type="submit">Ajouter</button>
     </form>
-    <div class="modal">
-      <div class="modal-content">
-        <h2>Modifier la réservation</h2>
-        <label>Numéro du Catway</label>
-        <input type="text" />
-        <br />
-
-        <label>Nom du Client</label>
-        <input type="text" />
-        <br />
-        <label>Nom du Bateau</label>
-        <input type="text" />
-        <br />
-        <label>Date de Début</label>
-        <input type="date" />
-        <br />
-        <label>Date de Fin</label>
-        <input type="date" />
-
-        <br />
-        <button>Enregistrer</button>
-        <button>Annuler</button>
-      </div>
-    </div>
 
     <h2>Liste des réservations</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Catway</th>
-          <th>Nom du client</th>
-          <th>Nom du bateau</th>
-          <th>Date de début</th>
-          <th>Date de fin</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td></td>
-          <td></td>
-          <td></td>
-          <td></td>
-          <td>
-            <br />
-          </td>
-          <td>
-            <button>Modifier la réservation</button>
-            <br />
-            <button>Supprimer</button>
-          </td>
-          <td></td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="tableau">
+      <table>
+        <thead>
+          <tr>
+            <th>Numéro du catway</th>
+            <th>Nom du client</th>
+            <th>Nom du bateau</th>
+            <th>Date de début</th>
+            <th>Date de fin</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
     <script>
-      let showModal = false;
-      let newReservationData = {};
-      let currentReservationId = null;
-
-      function openModal(res) {
-        showModal = true;
-        currentReservationId = res._id;
-        newReservationData = {
-          catwayNumber: res.catwayNumber,
-          clientName: res.clientName,
-          boatName: res.boatName,
-          startDate: res.startDate.slice(0, 10),
-          endDate: res.endDate.slice(0, 10),
-        };
-      }
-
-      async function handleUpdateReservation() {
-        try {
-          const response = await fetch(
-            `/api/reservations/${currentReservationId}`,
-            {
-              method: "PATCH",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(newReservationData),
-            }
-          );
-
+      const token = localStorage.getItem("token");
+      console.log("Token envoyé (reservationboard) :", token);
+      fetch("/api/reservations", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      })
+        .then((response) => {
           if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(
-              errorData.message || "Erreur lors de la mise à jour"
+            console.error("Erreur d'authentification:", response.status);
+            return Promise.reject(new Error("Erreur d'authentification"));
+          }
+          return response.json();
+        })
+        .then((reservations) => {
+          if (Array.isArray(reservations)) {
+            const tableBody = document.querySelector("tbody");
+            reservations.forEach((reservation) => {
+              const row = tableBody.insertRow();
+              const catwayCell = row.insertCell();
+              const clientCell = row.insertCell();
+              const boatCell = row.insertCell();
+              const startCell = row.insertCell();
+              const endCell = row.insertCell();
+              const actionCell = row.insertCell();
+
+              catwayCell.textContent = reservation.catwayNumber;
+              clientCell.textContent = reservation.clientName;
+              boatCell.textContent = reservation.boatName;
+              const startDate = new Date(reservation.startDate);
+              const formattedStartDate = `${startDate
+                .getDate()
+                .toString()
+                .padStart(2, "0")}/${(startDate.getMonth() + 1)
+                .toString()
+                .padStart(2, "0")}/${startDate.getFullYear()}`;
+              startCell.textContent = formattedStartDate;
+
+              const endDate = new Date(reservation.endDate);
+              const formattedEndDate = `${endDate
+                .getDate()
+                .toString()
+                .padStart(2, "0")}/${(endDate.getMonth() + 1)
+                .toString()
+                .padStart(2, "0")}/${endDate.getFullYear()}`;
+              endCell.textContent = formattedEndDate;
+              actionCell.innerHTML = `
+                <button class="modifier-btn" data-id="${reservation._id}">Modifier</button>
+                <br>
+                <button class="supprimer-btn" data-id="${reservation._id}">Supprimer</button>
+            `;
+            });
+            tableBody.addEventListener("click", (event) => {
+              if (event.target.classList.contains("modifier-btn")) {
+                const reservationId = event.target.dataset.id;
+                // TODO: Implémenter la logique de modification pour la réservation avec l'ID reservationId
+                console.log("Modifier réservation avec ID :", reservationId);
+              } else if (event.target.classList.contains("supprimer-btn")) {
+                const reservationId = event.target.dataset.id;
+                // TODO: Implémenter la logique de suppression pour la réservation avec l'ID reservationId
+                console.log("Supprimer réservation avec ID :", reservationId);
+              }
+            });
+          } else {
+            console.error(
+              "Les données renvoyées par l'API ne sont pas un tableau:",
+              reservations
             );
           }
-
-          // Fermer la modale et rafraîchir la liste des réservations
-          showModal = false;
-
-          // refreshReservations(); // Fonction pour rafraîchir la liste (à implémenter)
-        } catch (error) {
-          console.error("Error updating reservation:", error);
-          // Afficher un message d'erreur à l'utilisateur
-        }
-      }
+        });
     </script>
   </body>
 </html>
-
-<!-- {showModal && (
-    <div className="modal">
-      <div className="modal-content">
-        <h2>Modifier la réservation</h2>
-        <label>Numéro du Catway</label>
-        <input
-          type="text"
-          value={newReservationData.catwayNumber}
-          onChange={(e) =>
-            setNewReservationData({
-              ...newReservationData,
-              catwayNumber: e.target.value,
-            })
-          }
-        />
-        <br />
-
-        <label>Nom du Client</label>
-        <input
-          type="text"
-          value={newReservationData.clientName}
-          onChange={(e) =>
-            setNewReservationData({
-              ...newReservationData,
-              clientName: e.target.value,
-            })
-          }
-        />
-        <br />
-        <label>Nom du Bateau</label>
-        <input
-          type="text"
-          value={newReservationData.boatName}
-          onChange={(e) =>
-            setNewReservationData({
-              ...newReservationData,
-              boatName: e.target.value,
-            })
-          }
-        />
-        <br />
-        <label>Date de Début</label>
-        <input
-          type="date"
-          value={newReservationData.startDate}
-          onChange={(e) =>
-            setNewReservationData({
-              ...newReservationData,
-              startDate: e.target.value,
-            })
-          }
-        />
-        <br />
-        <label>Date de Fin</label>
-        <input
-          type="date"
-          value={newReservationData.endDate}
-          onChange={(e) =>
-            setNewReservationData({
-              ...newReservationData,
-              endDate: e.target.value,
-            })
-          }
-        />
-
-        <br />
-        <button onClick={handleUpdateReservation}>Enregistrer</button>
-        <button onClick={() => setShowModal(false)}>Annuler</button>
-      </div>
-    </div>
-  )}
-
-  <h2>Ajouter une réservation</h2>
-  <form onSubmit={handleNewReservation}>
-    <select
-      onChange={(e) =>
-        setNewReservation({
-          ...newReservation,
-          reservation: e.target.value,
-        })
-      }
-    >
-      <option value="">Choisir un catway</option>
-      {catways.map((catway) => (
-        <option key={catway._id} value={catway.catwayNumber}>
-          {catway.catwayNumber} - {catway.name}
-        </option>
-      ))}
-    </select>
-    <input
-      type="text"
-      placeholder="Nom du client"
-      onChange={(e) =>
-        setNewReservation({ ...newReservation, clientName: e.target.value })
-      }
-      required
-    />
-    <input
-      type="text"
-      placeholder="Nom du bateau"
-      onChange={(e) =>
-        setNewReservation({ ...newReservation, boatName: e.target.value })
-      }
-      required
-    />
-    <input
-      type="date"
-      placeholder="date de début"
-      onChange={(e) =>
-        setNewReservation({ ...newReservation, StartDate: e.target.value })
-      }
-      required
-    />
-    <input
-      type="date"
-      placeholder="date de fin"
-      onChange={(e) =>
-        setNewReservation({ ...newReservation, StartDate: e.target.value })
-      }
-      required
-    />
-    <button type="submit">Ajouter</button>
-  </form>
-  <h2>Liste des réservations</h2>
-  <table border="1">
-    <thead>
-      <tr>
-        <th>Catway</th>
-        <th>Nom du client</th>
-        <th>Nom du bateau</th>
-        <th>Date de début</th>
-        <th>Date de fin</th>
-        <th>Action</th>
-      </tr>
-    </thead>
-    <tbody>
-      {reservations.map((res) => (
-        <tr key={res._id}>
-          <td>{res.catwayNumber}</td>
-          <td>{res.clientName}</td>
-          <td>{res.boatName}</td>
-          <td>{new Date(res.startDate).toLocaleDateString()}</td>
-          <td>
-            {new Date(res.endDate).toLocaleDateString()}
-            <br />
-          </td>
-          <td>
-            <button className="state" onClick={() => openModal(res)}>
-              Modifier la réservation
-            </button>
-            <br />
-            <button onClick={() => handleDeleteReservation(res._id)}>
-              Supprimer
-            </button>
-          </td>
-          <td></td>
-        </tr>
-      ))}
-    </tbody>
-  </table> -->

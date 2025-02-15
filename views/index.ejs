@@ -65,13 +65,17 @@
             return response.json();
           })
           .then((data) => {
-            localStorage.setItem("token", data.token);
+            if (data.token) {
+              localStorage.setItem("token", data.token);
+              console.log("Token stocké :", localStorage.getItem("token"));
+              const expiryDate = new Date();
+              expiryDate.setHours(expiryDate.getHours() + 8);
+              localStorage.setItem("tokenExpiry", expiryDate.toISOString());
 
-            const expiryDate = new Date();
-            expiryDate.setHours(expiryDate.getHours() + 1);
-            localStorage.setItem("tokenExpiry", expiryDate.toISOString());
-
-            window.location.href = "/dashboard";
+              window.location.href = "/dashboard";
+            } else {
+              console.error("Token non reçu lors de la connexion :", data);
+            }
           })
           .catch((error) => {
             errorMessage.textContent = error.message;
